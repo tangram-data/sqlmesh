@@ -337,7 +337,8 @@ def set_catalog(override_mapping: t.Optional[t.Dict[str, CatalogSupport]] = None
             if catalog_name != current_catalog:
                 engine_adapter.set_current_catalog(catalog_name)
                 resp = func(*list_args, **kwargs)
-                engine_adapter.set_current_catalog(current_catalog)
+                if not (current_catalog is None):
+                    engine_adapter.set_current_catalog(current_catalog)
             else:
                 resp = func(*list_args, **kwargs)
             return resp

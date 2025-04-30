@@ -1231,6 +1231,62 @@ class PostgresConnectionConfig(ConnectionConfig):
         return init
 
 
+class TangramSQLConnectionConfig(ConnectionConfig):
+    host: str
+    user: str
+    password: str
+    port: int
+    database: str
+    catalog: str = None
+    engine_type: str
+    keepalives_idle: t.Optional[int] = None
+    connect_timeout: int = 10
+    sslmode: t.Optional[str] = None
+
+    concurrent_tasks: int = 4
+    register_comments: bool = True
+    pre_ping: bool = True
+
+    type_: t.Literal["tangramsql"] = Field(alias="type", default="tangramsql")
+
+    @property
+    def _connection_kwargs_keys(self) -> t.Set[str]:
+        return {
+            "host",
+            "user",
+            "password",
+            "port",
+            "database",
+            "keepalives_idle",
+            "connect_timeout",
+            "sslmode",
+        }
+
+    @property
+    def _engine_adapter(self) -> t.Type[EngineAdapter]:
+        if self.engine_type == "databricks":
+            return engine_adapter.TangramDatabricksEngineAdapter
+        elif self.engine_type == "duckdb":
+            return engine_adapter.TangramDuckDBEngineAdapter
+        elif self.engine_type == "clickhouse":
+            return engine_adapter.TangramClickhouseEngineAdapter
+        return engine_adapter.PostgresEngineAdapter
+
+    @property
+    def _connection_factory(self) -> t.Callable:
+        from psycopg2 import connect
+
+        return connect
+
+    @property
+    def _cursor_init(self) -> t.Optional[t.Callable[[t.Any], None]]:
+        return None
+
+    @property
+    def _extra_engine_config(self) -> t.Dict[str, t.Any]:
+        return {"catalog": self.catalog}
+
+
 class MySQLConnectionConfig(ConnectionConfig):
     host: str
     user: str
