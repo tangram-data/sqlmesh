@@ -7,7 +7,7 @@ from sqlmesh.core.engine_adapter.clickhouse import ClickhouseEngineAdapter
 from sqlmesh.core.engine_adapter.databricks import DatabricksEngineAdapter
 from sqlmesh.core.engine_adapter.duckdb import DuckDBEngineAdapter
 from sqlmesh.core.engine_adapter.postgres import PostgresEngineAdapter
-
+from sqlmesh.core.engine_adapter.mixins import GetCurrentCatalogFromFunctionMixin
 import pandas as pd
 from sqlmesh.core.engine_adapter.shared import (
     CatalogSupport,
@@ -25,6 +25,20 @@ if t.TYPE_CHECKING:
 
 
 class TangramSQLMixin(EngineAdapter):
+
+    def fetchone(
+        self,
+        query: t.Union[exp.Expression, str],
+        ignore_unsupported_errors: bool = False,
+        quote_identifiers: bool = False,
+    ) -> t.Tuple:
+        self.execute(
+            query,
+            ignore_unsupported_errors=ignore_unsupported_errors,
+            quote_identifiers=quote_identifiers,
+        )
+        return self.cursor.fetchone()
+
     def set_current_catalog(self, catalog: str) -> None:
         """Sets the catalog name of the current connection."""
         self.execute(f"use catalog {catalog}")
@@ -100,8 +114,10 @@ class TangramDatabricksEngineAdapter(TangramSQLMixin, DatabricksEngineAdapter):
         "_get_data_objects": CatalogSupport.REQUIRES_SET_CATALOG,
     }
 )
-class TangramClickhouseEngineAdapter(TangramSQLMixin, ClickhouseEngineAdapter):
-    pass
+class TangramClickhouseEngineAdapter(TangramSQLMixin, GetCurrentCatalogFromFunctionMixin, ClickhouseEngineAdapter):
+    @property
+    def catalog_support(self) -> CatalogSupport:
+        return CatalogSupport.FULL_SUPPORT
 
 
 @set_catalog(
